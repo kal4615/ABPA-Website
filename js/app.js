@@ -265,22 +265,37 @@ function generateBracket() {
   let playersArr;
   if (seedMode === 'standings') {
     const sorted = sortedPlayers();
-    playersArr = sorted.map((p, i) => ({ name: p.name, seed: i + 1 }));
+    playersArr = sorted.map((p, i) => ({ name: p.name, seed: i + 1, wins: 0, losses: 0 }));
   } else {
-    playersArr = state.players.map((p, i) => ({ name: p.name, seed: i + 1 }));
+    playersArr = state.players.map((p, i) => ({ name: p.name, seed: i + 1, wins: 0, losses: 0 }));
     for (let i = playersArr.length - 1; i > 0; i--) {
       const j = Math.floor(Math.random() * (i + 1));
       [playersArr[i], playersArr[j]] = [playersArr[j], playersArr[i]];
     }
   }
 
-  while (playersArr.length < numPlayers) playersArr.push({ name: 'TBD', seed: null });
+  while (playersArr.length < numPlayers) playersArr.push({ name: 'TBD', seed: null, wins: 0, losses: 0 });
   playersArr = playersArr.slice(0, numPlayers);
-
   const size = nextPow2(numPlayers);
-  while (playersArr.length < size) playersArr.push({ name: 'BYE', seed: null });
+  while (playersArr.length < size) playersArr.push({ name: 'BYE', seed: null, wins: 0, losses: 0 });
 
-  bracketState = buildBracketState(playersArr, format);
+  function seedOrder(n) {
+    if (n === 1) return [1];
+    let order = [1, 2];
+    while (order.length < n) {
+      const next = [];
+      const newLen = order.length * 2;
+      order.forEach(x => { next.push(x); next.push(newLen + 1 - x); });
+      order = next;
+    }
+    return order.slice(0, n);
+  }
+
+  const order = seedOrder(size);
+  const seededPlayers = order.map(pos => (playersArr[pos - 1] || { name: 'BYE', seed: null, wins: 0, losses: 0 }));
+
+  bracketState = buildBracketState(seededPlayers, format);
+  settleByeMatches();
   renderBracket();
 }
 
@@ -300,18 +315,16 @@ function buildBracketState(players, format) {
   if (format === 'single') {
     // wire next-match links for winners bracket
     wireSide(matches, 'W');
-    return { format, matches };
+    assignMatchNumbers(matches, format);
+    return { format, matches, players };
   }
 
-  // Losers bracket
-  const numFirstRoundLosers = Math.floor(players.length / 2);
-  const lbPlayers = Array(numFirstRoundLosers).fill(null);
-  const lRounds = buildSideMatches(lbPlayers, 'L', id);
+  const lRounds = buildLosersMatches(players.length, id);
   id = lRounds.nextId;
   matches.push(...lRounds.matches);
 
   wireSide(matches, 'W');
-  wireSide(matches, 'L');
+  wireLosersSide(matches);
 
   // Grand Final
   const gf = { id: id++, round: 0, side: 'GF', p1: null, p2: null, winner: null, loser: null, nextMatchId: null, nextSlot: null, loserMatchId: null, loserSlot: null };
@@ -337,8 +350,9 @@ function buildBracketState(players, format) {
 
   // Wire W-bracket losers into L-bracket
   wireWinnersToLosers(matches, players.length);
+  assignMatchNumbers(matches, format);
 
-  return { format, matches };
+  return { format, matches, players };
 }
 
 function buildSideMatches(players, side, startId) {
@@ -365,6 +379,36 @@ function buildSideMatches(players, side, startId) {
   return { matches, nextId: id };
 }
 
+function buildLosersMatches(size, startId) {
+  const matches = [];
+  let id = startId;
+  const winnersRounds = Math.log2(size);
+  const losersRounds = Math.max(1, (winnersRounds - 1) * 2);
+
+  for (let round = 1; round <= losersRounds; round++) {
+    const divisor = Math.pow(2, Math.floor((round + 1) / 2) + 1);
+    const matchCount = Math.max(1, size / divisor);
+
+    for (let i = 0; i < matchCount; i++) {
+      matches.push({
+        id: id++,
+        round,
+        side: 'L',
+        p1: null,
+        p2: null,
+        winner: null,
+        loser: null,
+        nextMatchId: null,
+        nextSlot: null,
+        loserMatchId: null,
+        loserSlot: null
+      });
+    }
+  }
+
+  return { matches, nextId: id };
+}
+
 function wireSide(matches, side) {
   const sideMatches = matches.filter(m => m.side === side).sort((a, b) => a.round - b.round || a.id - b.id);
   const byRound = {};
@@ -382,20 +426,34 @@ function wireSide(matches, side) {
   }
 }
 
+function wireLosersSide(matches) {
+  const lByRound = groupMatchesByRound(matches.filter(m => m.side === 'L'));
+  const rounds = Object.keys(lByRound).map(Number).sort((a, b) => a - b);
+
+  for (let ri = 0; ri < rounds.length - 1; ri++) {
+    const cur = lByRound[rounds[ri]];
+    const nxt = lByRound[rounds[ri + 1]];
+    const keepsSameCount = cur.length === nxt.length;
+
+    cur.forEach((m, i) => {
+      const nextMatch = keepsSameCount ? nxt[i] : nxt[Math.floor(i / 2)];
+      m.nextMatchId = nextMatch.id;
+      m.nextSlot = keepsSameCount ? 1 : ((i % 2) + 1);
+    });
+  }
+}
+
 function wireWinnersToLosers(matches, size) {
   // W round 1 losers → L round 1
   // W round 2+ losers → corresponding L rounds
-  const wByRound = {};
-  matches.filter(m => m.side === 'W').forEach(m => { (wByRound[m.round] = wByRound[m.round] || []).push(m); });
-  const lByRound = {};
-  matches.filter(m => m.side === 'L').forEach(m => { (lByRound[m.round] = lByRound[m.round] || []).push(m); });
+  const wByRound = groupMatchesByRound(matches.filter(m => m.side === 'W'));
+  const lByRound = groupMatchesByRound(matches.filter(m => m.side === 'L'));
 
   const wRounds = Object.keys(wByRound).map(Number).sort((a, b) => a - b);
-  const lRounds = Object.keys(lByRound).map(Number).sort((a, b) => a - b);
 
   // R1 W losers → L R1 (pairs)
   const wR1 = wByRound[wRounds[0]] || [];
-  const lR1 = lByRound[lRounds[0]] || [];
+  const lR1 = lByRound[1] || [];
   wR1.forEach((m, i) => {
     const lm = lR1[Math.floor(i / 2)];
     if (lm) {
@@ -405,17 +463,138 @@ function wireWinnersToLosers(matches, size) {
   });
 
   // Subsequent W rounds → L rounds (interleaved)
-  for (let wi = 1; wi < wRounds.length - 1; wi++) {
-    const wMs = wByRound[wRounds[wi]] || [];
-    const lMs = lByRound[lRounds[Math.min(wi * 2 - 1, lRounds.length - 1)]] || lR1;
-    wMs.forEach((m, i) => {
-      const lm = lMs[i % lMs.length];
-      if (lm) { m.loserMatchId = lm.id; m.loserSlot = 1; }
+  for (let wRound = 2; wRound <= wRounds[wRounds.length - 1]; wRound++) {
+    const targetRound = (wRound - 1) * 2;
+    const wMatches = wByRound[wRound] || [];
+    const lMatches = lByRound[targetRound] || [];
+
+    wMatches.forEach((m, i) => {
+      const lm = lMatches[i];
+      if (lm) {
+        m.loserMatchId = lm.id;
+        m.loserSlot = 2;
+      }
     });
   }
 }
 
 // ── Pick winner ───────────────────────────────────────────────────────────────
+
+function groupMatchesByRound(matches) {
+  return matches.reduce((acc, match) => {
+    (acc[match.round] = acc[match.round] || []).push(match);
+    return acc;
+  }, {});
+}
+
+function assignMatchNumbers(matches, format) {
+  const ordered = [];
+  const addRound = (side, round) => {
+    matches
+      .filter(m => m.side === side && m.round === round)
+      .sort((a, b) => a.id - b.id)
+      .forEach(m => ordered.push(m));
+  };
+
+  const wRounds = Object.keys(groupMatchesByRound(matches.filter(m => m.side === 'W')))
+    .map(Number)
+    .sort((a, b) => a - b);
+
+  if (format === 'single') {
+    wRounds.forEach(round => addRound('W', round));
+  } else {
+    wRounds.forEach((round, index) => {
+      addRound('W', round);
+
+      if (index === 0) {
+        addRound('L', 1);
+      } else if (index === wRounds.length - 1) {
+        addRound('L', (round - 1) * 2);
+      } else {
+        addRound('L', (round - 1) * 2);
+        addRound('L', (round - 1) * 2 + 1);
+      }
+    });
+
+    matches
+      .filter(m => m.side === 'GF' || m.side === 'GF2')
+      .sort((a, b) => a.id - b.id)
+      .forEach(m => ordered.push(m));
+  }
+
+  const seen = new Set();
+  ordered.forEach(match => {
+    if (!seen.has(match.id)) {
+      seen.add(match.id);
+      match.matchNo = seen.size;
+    }
+  });
+  matches
+    .filter(match => !seen.has(match.id))
+    .sort((a, b) => a.id - b.id)
+    .forEach(match => {
+      seen.add(match.id);
+      match.matchNo = seen.size;
+    });
+}
+
+function isByePlayer(player) {
+  return (typeof player === 'string') ? player === 'BYE' : player?.name === 'BYE';
+}
+
+function countTournamentRecord(match, winner, loser, delta) {
+  if (!winner || !loser || isByePlayer(winner) || isByePlayer(loser)) return;
+  if (typeof winner === 'object') winner.wins = Math.max(0, (winner.wins || 0) + delta);
+  if (typeof loser === 'object') loser.losses = Math.max(0, (loser.losses || 0) + delta);
+  match.countsRecord = delta > 0;
+}
+
+function playerDisplayName(player) {
+  if (!player) return '-';
+  const name = typeof player === 'string' ? player : player.name;
+  if (!player || typeof player !== 'object' || isByePlayer(player)) return name || '-';
+  return `${name || '-'} (${player.wins || 0} - ${player.losses || 0})`;
+}
+
+function placePlayerInMatch(matchId, slot, player) {
+  const target = bracketState.matches.find(m => m.id === matchId);
+  if (!target) return;
+  if (slot === 1) target.p1 = player;
+  else target.p2 = player;
+}
+
+function settleByeMatches() {
+  if (!bracketState) return;
+
+  let changed = true;
+  while (changed) {
+    changed = false;
+
+    bracketState.matches.forEach(match => {
+      if (match.winner || !match.p1 || !match.p2) return;
+
+      const p1Bye = isByePlayer(match.p1);
+      const p2Bye = isByePlayer(match.p2);
+      if (!p1Bye && !p2Bye) return;
+
+      const winner = p1Bye && !p2Bye ? match.p2 : match.p1;
+      const loser = winner === match.p1 ? match.p2 : match.p1;
+
+      match.winner = winner;
+      match.loser = loser;
+
+      if (match.nextMatchId !== null && match.side !== 'GF') {
+        placePlayerInMatch(match.nextMatchId, match.nextSlot, winner);
+      }
+
+      if (match.loserMatchId !== null && loser) {
+        placePlayerInMatch(match.loserMatchId, match.loserSlot, loser);
+      }
+
+      changed = true;
+    });
+  }
+}
 
 function pickWinner(matchId, winner) {
   const match = bracketState.matches.find(m => m.id === matchId);
@@ -423,9 +602,10 @@ function pickWinner(matchId, winner) {
   const loser = winner === match.p1 ? match.p2 : match.p1;
   match.winner = winner;
   match.loser = loser;
+  countTournamentRecord(match, winner, loser, 1);
 
   // Advance winner to next match
-  if (match.nextMatchId !== null) {
+  if (match.nextMatchId !== null && match.side !== 'GF') {
     const next = bracketState.matches.find(m => m.id === match.nextMatchId);
     if (next) {
       if (match.nextSlot === 1) next.p1 = winner;
@@ -434,11 +614,72 @@ function pickWinner(matchId, winner) {
   }
 
   // Send loser to losers bracket (double/triple)
-  if (match.loserMatchId !== null && loser) {
-    const lm = bracketState.matches.find(m => m.id === match.loserMatchId);
-    if (lm) {
-      if (match.loserSlot === 1) lm.p1 = loser;
-      else lm.p2 = loser;
+  if (loser && typeof loser === 'object') {
+    const maxLosses = bracketState.format === 'triple' ? 3 : 2;
+    if (loser.losses < maxLosses) {
+      // If this was the Grand Final and opponent still has remaining lives, put them into GF2
+      if (match.side === 'GF') {
+        const gf2 = bracketState.matches.find(m => m.side === 'GF2');
+        if (gf2) {
+          gf2.p1 = winner;
+          gf2.p2 = loser;
+          settleByeMatches();
+          renderBracket();
+          return;
+        }
+      }
+
+      // Prefer using pre-wired loserMatchId (maps a W-match's loser into the correct L round/slot)
+      if (match.loserMatchId !== null) {
+        const target = bracketState.matches.find(m => m.id === match.loserMatchId);
+        if (target) {
+          let placed = false;
+          // try the intended slot first, then the opposite slot
+          if (match.loserSlot === 1) {
+            if (!target.p1) { target.p1 = loser; placed = true; }
+            else if (!target.p2) { target.p2 = loser; placed = true; }
+          } else {
+            if (!target.p2) { target.p2 = loser; placed = true; }
+            else if (!target.p1) { target.p1 = loser; placed = true; }
+          }
+
+          // if intended match is full, try other matches in the same L round
+          if (!placed) {
+            const sameRound = bracketState.matches.filter(m => m.side === 'L' && m.round === target.round);
+            for (const lm of sameRound) {
+              if (!lm.p1) { lm.p1 = loser; placed = true; break; }
+              if (!lm.p2) { lm.p2 = loser; placed = true; break; }
+            }
+          }
+
+          // fallback to first available anywhere in L bracket
+          if (!placed) {
+            const allL = bracketState.matches.filter(m => m.side === 'L').sort((a,b)=>a.id-b.id);
+            for (const lm of allL) {
+              if (!lm.p1) { lm.p1 = loser; placed = true; break; }
+              if (!lm.p2) { lm.p2 = loser; placed = true; break; }
+            }
+          }
+
+          settleByeMatches();
+          renderBracket();
+          return;
+        }
+      }
+
+      // If no wiring available, place into first available L slot (fallback)
+      const lMatches = bracketState.matches.filter(m => m.side === 'L').sort((a,b)=>a.id-b.id);
+      let placed = false;
+      for (const lm of lMatches) {
+        if (!lm.p1) { lm.p1 = loser; placed = true; break; }
+        if (!lm.p2) { lm.p2 = loser; placed = true; break; }
+      }
+      if (!placed) {
+        const gf = bracketState.matches.find(m => m.side === 'GF');
+        if (gf && !gf.p2) gf.p2 = loser;
+      }
+    } else {
+      // eliminated; do nothing (they're out)
     }
   }
 
@@ -448,6 +689,7 @@ function pickWinner(matchId, winner) {
     // guard only
   }
 
+  settleByeMatches();
   renderBracket();
 }
 
@@ -470,10 +712,17 @@ function renderBracket() {
   wrap.appendChild(resetRow);
   document.getElementById('bracket-clear').addEventListener('click', () => {
     bracketState.matches.forEach(m => {
-      m.winner = null; m.loser = null;
+      m.winner = null; m.loser = null; m.countsRecord = false;
       if (m.side !== 'W' || m.round !== 1) { m.p1 = null; m.p2 = null; }
     });
+    (bracketState.players || []).forEach(player => {
+      if (player) {
+        player.wins = 0;
+        player.losses = 0;
+      }
+    });
     // restore original R1 players (they never change)
+    settleByeMatches();
     renderBracket();
     toast('Results cleared!');
   });
@@ -481,7 +730,14 @@ function renderBracket() {
   // Champions banner
   const gf2 = bracketState.matches.find(m => m.side === 'GF2');
   const gf = bracketState.matches.find(m => m.side === 'GF');
-  const championObj = gf2?.winner || (bracketState.format === 'single' ? getLastMatch('W')?.winner : null) || (gf && !gf2 ? gf.winner : null);
+  const maxLosses = bracketState.format === 'triple' ? 3 : 2;
+  let championObj = null;
+  if (bracketState.format === 'single') championObj = getLastMatch('W')?.winner || null;
+  else if (gf2 && gf2.winner) championObj = gf2.winner;
+  else if (gf && gf.winner && gf.loser) {
+    const loserLosses = typeof gf.loser === 'object' ? (gf.loser.losses || 0) : maxLosses;
+    if (loserLosses >= maxLosses) championObj = gf.winner;
+  }
 
   if (championObj) {
     const champName = (typeof championObj === 'string') ? championObj : (championObj?.name || String(championObj));
@@ -551,6 +807,11 @@ function buildMatchEl(match) {
   const matchDiv = document.createElement('div');
   matchDiv.className = 'bracket-match';
 
+  const matchNo = document.createElement('div');
+  matchNo.className = 'bracket-match-no';
+  matchNo.textContent = `Match ${match.matchNo || match.id + 1}`;
+  matchDiv.appendChild(matchNo);
+
   [1, 2].forEach((slot, idx) => {
     const player = slot === 1 ? match.p1 : match.p2;
     const isWinner = match.winner && match.winner === player;
@@ -577,6 +838,7 @@ function buildMatchEl(match) {
 
     const nameSpan = document.createElement('span');
     nameSpan.textContent = isEmpty ? '—' : (playerName || '—');
+    if (!isEmpty) nameSpan.textContent = playerDisplayName(player);
     if (isEmpty) nameSpan.style.color = '#333';
     slotEl.appendChild(nameSpan);
 
@@ -621,15 +883,27 @@ function undoWinner(matchId) {
     }
   }
 
-  // Remove loser from losers bracket
   if (match.loserMatchId !== null) {
-    const lm = bracketState.matches.find(m => m.id === match.loserMatchId);
-    if (lm) {
-      if (lm.winner) { undoWinner(lm.id); }
-      if (match.loserSlot === 1) lm.p1 = null;
-      else lm.p2 = null;
+    const target = bracketState.matches.find(m => m.id === match.loserMatchId);
+    if (target) {
+      if (target.winner) { undoWinner(target.id); }
+      if (match.loserSlot === 1) target.p1 = null;
+      else target.p2 = null;
     }
   }
+
+  if (match.side === 'GF') {
+    const gf2 = bracketState.matches.find(m => m.side === 'GF2');
+    if (gf2) {
+      if (gf2.winner) { undoWinner(gf2.id); }
+      if (gf2.p1 === prevWinner) gf2.p1 = null;
+      if (gf2.p2 === prevWinner) gf2.p2 = null;
+      if (gf2.p1 === prevLoser) gf2.p1 = null;
+      if (gf2.p2 === prevLoser) gf2.p2 = null;
+    }
+  }
+
+  if (match.countsRecord) countTournamentRecord(match, prevWinner, prevLoser, -1);
 
   match.winner = null;
   match.loser = null;

@@ -486,7 +486,7 @@
     display: flex;
     flex-direction: column;
     justify-content: space-around;
-    min-width: 160px;
+    min-width: 210px;
   }
 
   .round-header {
@@ -505,21 +505,35 @@
   .bracket-match {
     display: flex;
     flex-direction: column;
-    margin: 4px 8px;
+    margin: 8px 12px;
     position: relative;
+  }
+
+  .bracket-match-no {
+    align-self: flex-start;
+    background: #151515;
+    border: 1px solid #2a2a2a;
+    color: var(--gold);
+    font-size: 0.65rem;
+    font-weight: 700;
+    letter-spacing: 1.5px;
+    line-height: 1;
+    margin-bottom: 3px;
+    padding: 0.3rem 0.55rem;
+    text-transform: uppercase;
   }
 
   .bracket-slot {
     background: #1c1c1c;
     border: 1px solid #2a2a2a;
     border-left: 3px solid #333;
-    padding: 0.45rem 0.75rem;
+    padding: 0.7rem 0.9rem;
     font-family: 'Barlow Condensed', sans-serif;
-    font-size: 0.85rem;
+    font-size: 1.05rem;
     font-weight: 700;
     letter-spacing: 1px;
     color: var(--white);
-    min-height: 34px;
+    min-height: 46px;
     display: flex;
     align-items: center;
     gap: 0.5rem;
@@ -625,9 +639,9 @@
   }
 
   .seed-num {
-    font-size: 0.65rem;
+    font-size: 0.8rem;
     color: var(--gray);
-    min-width: 14px;
+    min-width: 18px;
     font-weight: 400;
   }
 
