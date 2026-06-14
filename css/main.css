@@ -1,0 +1,927 @@
+:root {
+    --black: #0a0a0a;
+    --dark: #111111;
+    --darker: #0d0d0d;
+    --red: #cc1f1f;
+    --red-bright: #e52222;
+    --red-dark: #8b0000;
+    --gold: #c9a84c;
+    --gold-light: #e8c96a;
+    --white: #f0f0f0;
+    --gray: #888;
+    --gray-light: #bbb;
+    --row-bg: #1a1a1a;
+    --stripe-yellow: #f0c000;
+    --stripe-black: #111;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--black);
+    color: var(--white);
+    font-family: 'Barlow Condensed', sans-serif;
+    min-height: 100vh;
+  }
+
+  /* HAZARD STRIPE */
+  .hazard {
+    height: 14px;
+    background: repeating-linear-gradient(
+      -45deg,
+      var(--stripe-yellow) 0px,
+      var(--stripe-yellow) 12px,
+      var(--stripe-black) 12px,
+      var(--stripe-black) 24px
+    );
+    flex-shrink: 0;
+  }
+
+  /* NAV */
+  nav {
+    background: var(--darker);
+    border-bottom: 2px solid var(--red);
+    padding: 0 2rem;
+    display: flex;
+    align-items: center;
+    gap: 2rem;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+  }
+
+  .nav-logo {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.75rem 0;
+    border-right: 1px solid #333;
+    padding-right: 2rem;
+  }
+
+  .logo-badge {
+    width: 48px;
+    height: 48px;
+    background: var(--red);
+    border: 2px solid var(--gold);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 1.1rem;
+    letter-spacing: 1px;
+    color: white;
+    clip-path: polygon(0 8px, 8px 0, 100% 0, 100% calc(100% - 8px), calc(100% - 8px) 100%, 0 100%);
+  }
+
+  .logo-text {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 1.4rem;
+    letter-spacing: 3px;
+    color: var(--white);
+    line-height: 1;
+  }
+
+  .logo-sub {
+    font-size: 0.65rem;
+    color: var(--gold);
+    letter-spacing: 2px;
+    font-weight: 600;
+    text-transform: uppercase;
+  }
+
+  .nav-links {
+    display: flex;
+    gap: 0;
+    list-style: none;
+  }
+
+  .nav-links li a {
+    display: block;
+    padding: 1.1rem 1.25rem;
+    color: var(--gray-light);
+    text-decoration: none;
+    font-size: 0.85rem;
+    font-weight: 700;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    transition: color 0.2s, background 0.2s;
+    border-bottom: 3px solid transparent;
+  }
+
+  .nav-links li a:hover,
+  .nav-links li a.active {
+    color: var(--white);
+    border-bottom-color: var(--red);
+    background: rgba(204,31,31,0.08);
+  }
+
+  /* PAGES */
+  .page { display: none; }
+  .page.active { display: block; }
+
+  /* HERO */
+  .hero {
+    background: var(--darker);
+    text-align: center;
+    padding: 3rem 2rem 2.5rem;
+    position: relative;
+    overflow: hidden;
+    border-bottom: 2px solid var(--red-dark);
+  }
+
+  .hero::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(ellipse at center top, rgba(204,31,31,0.12) 0%, transparent 65%);
+    pointer-events: none;
+  }
+
+  .hero-season {
+    display: inline-block;
+    background: var(--red);
+    color: white;
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 0.75rem;
+    font-weight: 700;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    padding: 0.3rem 1.2rem;
+    margin-bottom: 1rem;
+    clip-path: polygon(8px 0, 100% 0, calc(100% - 8px) 100%, 0 100%);
+  }
+
+  .hero h1 {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: clamp(4rem, 10vw, 7rem);
+    letter-spacing: 6px;
+    line-height: 0.9;
+    color: var(--white);
+    text-shadow: 0 0 60px rgba(204,31,31,0.4);
+  }
+
+  .hero h1 span {
+    color: var(--red-bright);
+    display: block;
+  }
+
+  .hero-meta {
+    margin-top: 1rem;
+    font-size: 0.8rem;
+    color: var(--gray);
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    font-weight: 600;
+  }
+
+  .hero-meta strong { color: var(--gold); }
+
+  .hero-stats {
+    display: flex;
+    justify-content: center;
+    gap: 3rem;
+    margin-top: 2rem;
+    padding-top: 1.5rem;
+    border-top: 1px solid #222;
+  }
+
+  .hero-stat { text-align: center; }
+  .hero-stat .num {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 2.8rem;
+    color: var(--red-bright);
+    line-height: 1;
+  }
+  .hero-stat .lbl {
+    font-size: 0.65rem;
+    color: var(--gray);
+    letter-spacing: 2px;
+    font-weight: 700;
+    text-transform: uppercase;
+    margin-top: 0.2rem;
+  }
+
+  /* SECTION HEADER */
+  .section-header {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 1.5rem 2rem 1rem;
+  }
+
+  .section-title {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 2.2rem;
+    letter-spacing: 4px;
+    color: var(--white);
+    line-height: 1;
+  }
+
+  .section-line {
+    flex: 1;
+    height: 2px;
+    background: linear-gradient(to right, var(--red), transparent);
+  }
+
+  /* STANDINGS TABLE */
+  .standings-wrap {
+    padding: 0 1.5rem 2rem;
+  }
+
+  .updated-tag {
+    font-size: 0.7rem;
+    color: var(--gold);
+    letter-spacing: 2px;
+    font-weight: 600;
+    text-transform: uppercase;
+    padding: 0 0.5rem 0.75rem;
+  }
+
+  .standings-table {
+    width: 100%;
+    border-collapse: collapse;
+  }
+
+  .standings-table thead tr {
+    background: transparent;
+  }
+
+  .standings-table thead th {
+    font-size: 0.7rem;
+    font-weight: 700;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--gray);
+    padding: 0.5rem 0.75rem;
+    text-align: center;
+  }
+
+  .standings-table thead th:nth-child(2) { text-align: left; }
+
+  .standings-table tbody tr {
+    background: #181818;
+    border-bottom: 3px solid var(--black);
+    transition: transform 0.15s;
+    cursor: pointer;
+  }
+
+  .standings-table tbody tr:hover { transform: scaleX(1.005); background: #1f1f1f; }
+
+  .standings-table tbody tr.rank-1 { background: #2a0a0a; border-left: 4px solid var(--gold); }
+  .standings-table tbody tr.rank-2 { background: #221212; border-left: 4px solid #aaa; }
+  .standings-table tbody tr.rank-3 { background: #1f1010; border-left: 4px solid #a05030; }
+
+  .standings-table tbody td {
+    padding: 0.85rem 0.75rem;
+    text-align: center;
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--white);
+    letter-spacing: 0.5px;
+  }
+
+  .standings-table tbody td:nth-child(2) { text-align: left; }
+
+  .rank-cell {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 1.4rem;
+    color: var(--gray);
+    width: 48px;
+  }
+
+  .rank-1 .rank-cell { color: var(--gold); }
+  .rank-2 .rank-cell { color: #bbb; }
+  .rank-3 .rank-cell { color: #c07040; }
+
+  .player-name {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 1.3rem;
+    letter-spacing: 2px;
+    background: var(--red);
+    color: white;
+    padding: 0.35rem 1.2rem;
+    display: inline-block;
+    min-width: 140px;
+    clip-path: polygon(6px 0, 100% 0, calc(100% - 6px) 100%, 0 100%);
+    text-align: center;
+  }
+
+  .rank-1 .player-name { background: linear-gradient(90deg, var(--red-dark), var(--red-bright)); }
+
+  .wp-cell {
+    font-size: 0.8rem;
+    font-weight: 700;
+    background: #222;
+    border-radius: 3px;
+    padding: 0.2rem 0.5rem;
+    display: inline-block;
+    color: var(--gray-light);
+  }
+
+  .pts-cell {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 1.6rem;
+    color: var(--red-bright);
+  }
+
+  .rank-1 .pts-cell { color: var(--gold); }
+
+  /* STATS PAGE */
+  .stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 1.5rem;
+    padding: 0 1.5rem 2rem;
+  }
+
+  .stat-card {
+    background: #141414;
+    border: 1px solid #222;
+    border-top: 3px solid var(--red);
+    padding: 1.25rem;
+  }
+
+  .stat-card-title {
+    font-size: 0.65rem;
+    font-weight: 700;
+    letter-spacing: 3px;
+    color: var(--gray);
+    text-transform: uppercase;
+    margin-bottom: 1rem;
+    border-bottom: 1px solid #222;
+    padding-bottom: 0.6rem;
+  }
+
+  .stat-leader {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    margin-bottom: 0.75rem;
+  }
+
+  .stat-rank-num {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 1.6rem;
+    color: var(--gray);
+    width: 28px;
+    text-align: center;
+    line-height: 1;
+    flex-shrink: 0;
+  }
+
+  .stat-leader:first-of-type .stat-rank-num { color: var(--gold); }
+
+  .stat-leader-name {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 1.2rem;
+    letter-spacing: 1.5px;
+    color: var(--white);
+    flex: 1;
+  }
+
+  .stat-bar-wrap {
+    flex: 2;
+    background: #222;
+    height: 8px;
+    border-radius: 4px;
+    overflow: hidden;
+  }
+
+  .stat-bar {
+    height: 100%;
+    background: var(--red);
+    border-radius: 4px;
+    transition: width 1s ease;
+  }
+
+  .stat-leader:first-of-type .stat-bar { background: linear-gradient(90deg, var(--red), var(--gold)); }
+
+  .stat-val {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 1.1rem;
+    color: var(--red-bright);
+    min-width: 42px;
+    text-align: right;
+  }
+
+  /* BRACKET PAGE */
+  .bracket-controls {
+    padding: 1rem 1.5rem;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    flex-wrap: wrap;
+    background: #111;
+    border-bottom: 1px solid #222;
+  }
+
+  .bracket-controls label {
+    font-size: 0.75rem;
+    font-weight: 700;
+    letter-spacing: 2px;
+    color: var(--gray);
+    text-transform: uppercase;
+  }
+
+  .bracket-controls select,
+  .bracket-controls input {
+    background: #1a1a1a;
+    border: 1px solid #333;
+    color: var(--white);
+    padding: 0.5rem 0.75rem;
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 0.9rem;
+    font-weight: 600;
+    letter-spacing: 1px;
+    cursor: pointer;
+  }
+
+  .bracket-controls select:focus,
+  .bracket-controls input:focus {
+    outline: 1px solid var(--red);
+  }
+
+  .btn-generate {
+    background: var(--red);
+    color: white;
+    border: none;
+    padding: 0.5rem 1.5rem;
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 1.1rem;
+    letter-spacing: 3px;
+    cursor: pointer;
+    clip-path: polygon(6px 0, 100% 0, calc(100% - 6px) 100%, 0 100%);
+    transition: background 0.2s;
+  }
+
+  .btn-generate:hover { background: var(--red-bright); }
+
+  .bracket-wrap {
+    padding: 1.5rem;
+    overflow-x: auto;
+  }
+
+  .bracket-label {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 1.2rem;
+    letter-spacing: 4px;
+    color: var(--red-bright);
+    margin-bottom: 0.75rem;
+    padding-bottom: 0.4rem;
+    border-bottom: 1px solid #222;
+  }
+
+  .bracket-side {
+    margin-bottom: 2rem;
+  }
+
+  .bracket-rounds {
+    display: flex;
+    gap: 0;
+    align-items: stretch;
+  }
+
+  .bracket-round {
+    display: flex;
+    flex-direction: column;
+    justify-content: space-around;
+    min-width: 160px;
+  }
+
+  .round-header {
+    font-size: 0.6rem;
+    font-weight: 700;
+    letter-spacing: 2px;
+    color: var(--gold);
+    text-transform: uppercase;
+    text-align: center;
+    margin-bottom: 0.5rem;
+    padding: 0.3rem;
+    background: #151515;
+    border-bottom: 1px solid #2a2a2a;
+  }
+
+  .bracket-match {
+    display: flex;
+    flex-direction: column;
+    margin: 4px 8px;
+    position: relative;
+  }
+
+  .bracket-slot {
+    background: #1c1c1c;
+    border: 1px solid #2a2a2a;
+    border-left: 3px solid #333;
+    padding: 0.45rem 0.75rem;
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 0.85rem;
+    font-weight: 700;
+    letter-spacing: 1px;
+    color: var(--white);
+    min-height: 34px;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    transition: border-color 0.15s, background 0.15s, color 0.15s;
+    user-select: none;
+  }
+
+  .bracket-slot.clickable {
+    cursor: pointer;
+  }
+
+  .bracket-slot.clickable:hover {
+    background: #2a1a1a;
+    border-left-color: var(--red);
+    color: var(--white);
+  }
+
+  .bracket-slot.winner {
+    border-left-color: var(--gold);
+    background: #1e1a0e;
+    color: var(--gold-light);
+    cursor: pointer;
+  }
+
+  .bracket-slot.winner:hover {
+    background: #252010;
+  }
+
+  .bracket-slot.eliminated {
+    border-left-color: var(--red-dark);
+    color: #444;
+    background: #151515;
+    text-decoration: line-through;
+    cursor: default;
+  }
+
+  .bracket-slot.empty {
+    color: #333;
+    font-style: italic;
+    font-weight: 400;
+    border-left-color: #1a1a1a;
+    cursor: default;
+  }
+
+  .bracket-slot.champion {
+    border-left-color: var(--gold);
+    background: #2a1f00;
+    color: var(--gold-light);
+    animation: champPulse 1.5s ease infinite;
+  }
+
+  @keyframes champPulse {
+    0%,100% { border-left-color: var(--gold); }
+    50% { border-left-color: var(--gold-light); }
+  }
+
+  .bracket-champion-banner {
+    text-align: center;
+    padding: 1.5rem;
+    background: #1a1500;
+    border: 1px solid #3a2f00;
+    border-top: 3px solid var(--gold);
+    margin: 1rem 0;
+  }
+
+  .bracket-champion-banner .champ-label {
+    font-size: 0.65rem;
+    font-weight: 700;
+    letter-spacing: 4px;
+    color: var(--gold);
+    text-transform: uppercase;
+    margin-bottom: 0.3rem;
+  }
+
+  .bracket-champion-banner .champ-name {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 2.5rem;
+    letter-spacing: 6px;
+    color: var(--gold-light);
+    line-height: 1;
+  }
+
+  .bracket-reset-btn {
+    background: none;
+    border: 1px solid #333;
+    color: var(--gray);
+    cursor: pointer;
+    padding: 0.3rem 1rem;
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 0.9rem;
+    letter-spacing: 2px;
+    margin-left: auto;
+    transition: border-color 0.2s, color 0.2s;
+    display: block;
+  }
+
+  .bracket-reset-btn:hover { border-color: var(--red); color: var(--red); }
+
+  .bracket-divider {
+    height: 2px;
+    background: #222;
+    margin: 0 8px;
+  }
+
+  .seed-num {
+    font-size: 0.65rem;
+    color: var(--gray);
+    min-width: 14px;
+    font-weight: 400;
+  }
+
+  .bracket-placeholder {
+    text-align: center;
+    padding: 4rem 2rem;
+    color: var(--gray);
+    font-size: 0.9rem;
+    letter-spacing: 2px;
+    font-weight: 600;
+    text-transform: uppercase;
+  }
+
+  .bracket-placeholder .big {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 3rem;
+    letter-spacing: 6px;
+    color: #1f1f1f;
+    display: block;
+  }
+
+  /* ADD RESULTS / ADMIN */
+  .admin-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1.5rem;
+    padding: 0 1.5rem 2rem;
+  }
+
+  @media (max-width: 600px) {
+    .admin-grid { grid-template-columns: 1fr; }
+    .hero h1 { font-size: 3.5rem; }
+    .hero-stats { gap: 1.5rem; }
+    nav { gap: 0; padding: 0 0.5rem; }
+    .nav-logo { padding-right: 1rem; }
+  }
+
+  .admin-card {
+    background: #141414;
+    border: 1px solid #222;
+    border-top: 3px solid var(--red);
+    padding: 1.25rem;
+  }
+
+  .admin-card h3 {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 1.3rem;
+    letter-spacing: 3px;
+    color: var(--white);
+    margin-bottom: 1rem;
+    padding-bottom: 0.6rem;
+    border-bottom: 1px solid #222;
+  }
+
+  .form-row {
+    display: flex;
+    gap: 0.75rem;
+    margin-bottom: 0.75rem;
+    align-items: center;
+  }
+
+  .form-row label {
+    font-size: 0.65rem;
+    font-weight: 700;
+    letter-spacing: 2px;
+    color: var(--gray);
+    text-transform: uppercase;
+    min-width: 80px;
+  }
+
+  .form-row input,
+  .form-row select {
+    flex: 1;
+    background: #1a1a1a;
+    border: 1px solid #333;
+    border-bottom: 2px solid #444;
+    color: var(--white);
+    padding: 0.5rem 0.75rem;
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 0.95rem;
+    font-weight: 600;
+  }
+
+  .form-row input:focus,
+  .form-row select:focus {
+    outline: none;
+    border-bottom-color: var(--red);
+  }
+
+  .btn-submit {
+    background: var(--red);
+    color: white;
+    border: none;
+    padding: 0.6rem 1.5rem;
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 1.1rem;
+    letter-spacing: 3px;
+    cursor: pointer;
+    width: 100%;
+    margin-top: 0.5rem;
+    clip-path: polygon(6px 0, 100% 0, calc(100% - 6px) 100%, 0 100%);
+    transition: background 0.2s;
+  }
+
+  .btn-submit:hover { background: var(--red-bright); }
+
+  .player-list {
+    list-style: none;
+  }
+
+  .player-list li {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.6rem 0;
+    border-bottom: 1px solid #1e1e1e;
+    font-weight: 600;
+    font-size: 0.95rem;
+  }
+
+  .player-list li .pill {
+    background: var(--red);
+    color: white;
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 1rem;
+    letter-spacing: 1px;
+    padding: 0.15rem 0.6rem;
+    clip-path: polygon(4px 0, 100% 0, calc(100% - 4px) 100%, 0 100%);
+    min-width: 30px;
+    text-align: center;
+  }
+
+  .player-list .del {
+    margin-left: auto;
+    background: none;
+    border: 1px solid #333;
+    color: var(--gray);
+    cursor: pointer;
+    padding: 0.2rem 0.5rem;
+    font-size: 0.7rem;
+    font-weight: 700;
+    letter-spacing: 1px;
+    transition: border-color 0.2s, color 0.2s;
+  }
+
+  .player-list .del:hover { border-color: var(--red); color: var(--red); }
+
+  /* edit modal */
+  .modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.85);
+    z-index: 500;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.2s;
+  }
+  .modal-overlay.open { opacity: 1; pointer-events: all; }
+
+  .modal {
+    background: #141414;
+    border: 1px solid #333;
+    border-top: 4px solid var(--red);
+    padding: 1.75rem;
+    width: 360px;
+    max-width: 90vw;
+    transform: translateY(20px);
+    transition: transform 0.2s;
+  }
+  .modal-overlay.open .modal { transform: translateY(0); }
+
+  .modal h3 {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 1.5rem;
+    letter-spacing: 4px;
+    color: var(--white);
+    margin-bottom: 0.25rem;
+  }
+
+  .modal-player-name {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 1.1rem;
+    letter-spacing: 2px;
+    color: var(--red-bright);
+    margin-bottom: 1.25rem;
+    padding-bottom: 0.75rem;
+    border-bottom: 1px solid #222;
+  }
+
+  .modal-fields {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr 1fr;
+    gap: 0.75rem;
+    margin-bottom: 1.25rem;
+  }
+
+  .modal-field label {
+    display: block;
+    font-size: 0.6rem;
+    font-weight: 700;
+    letter-spacing: 2px;
+    color: var(--gray);
+    text-transform: uppercase;
+    margin-bottom: 0.3rem;
+  }
+
+  .modal-field input {
+    width: 100%;
+    background: #1a1a1a;
+    border: 1px solid #333;
+    border-bottom: 2px solid #444;
+    color: var(--white);
+    padding: 0.5rem 0.5rem;
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 1.4rem;
+    text-align: center;
+    letter-spacing: 1px;
+  }
+
+  .modal-field input:focus {
+    outline: none;
+    border-bottom-color: var(--red);
+    background: #1e1e1e;
+  }
+
+  .modal-note {
+    font-size: 0.7rem;
+    color: var(--gray);
+    letter-spacing: 1px;
+    margin-bottom: 1rem;
+    line-height: 1.5;
+  }
+
+  .modal-note strong { color: var(--gold); }
+
+  .modal-btns {
+    display: flex;
+    gap: 0.75rem;
+  }
+
+  .modal-btns .btn-submit { margin-top: 0; }
+
+  .btn-cancel {
+    background: #222;
+    color: var(--gray-light);
+    border: 1px solid #333;
+    padding: 0.6rem 1.5rem;
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 1.1rem;
+    letter-spacing: 3px;
+    cursor: pointer;
+    flex: 1;
+    transition: background 0.2s;
+  }
+  .btn-cancel:hover { background: #2a2a2a; }
+
+  .edit-btn {
+    background: none;
+    border: 1px solid #333;
+    color: var(--gold);
+    cursor: pointer;
+    padding: 0.2rem 0.5rem;
+    font-size: 0.7rem;
+    font-weight: 700;
+    letter-spacing: 1px;
+    transition: border-color 0.2s, color 0.2s;
+  }
+  .edit-btn:hover { border-color: var(--gold); background: rgba(201,168,76,0.08); }
+
+  /* toast */
+  #toast {
+    position: fixed;
+    bottom: 2rem;
+    right: 2rem;
+    background: var(--red);
+    color: white;
+    padding: 0.75rem 1.5rem;
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 1rem;
+    letter-spacing: 3px;
+    clip-path: polygon(8px 0, 100% 0, calc(100% - 8px) 100%, 0 100%);
+    transform: translateY(80px);
+    opacity: 0;
+    transition: all 0.3s ease;
+    z-index: 999;
+    pointer-events: none;
+  }
+
+  #toast.show { transform: translateY(0); opacity: 1; }
+
+  /* scrollbar */
+  ::-webkit-scrollbar { width: 6px; height: 6px; }
+  ::-webkit-scrollbar-track { background: #111; }
+  ::-webkit-scrollbar-thumb { background: var(--red-dark); }

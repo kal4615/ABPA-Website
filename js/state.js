@@ -1,0 +1,1 @@
+export const DEFAULT_PLAYERS = []; // move DEFAULT_PLAYERS and state here
