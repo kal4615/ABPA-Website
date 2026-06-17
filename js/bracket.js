@@ -7,22 +7,37 @@ export function generateBracket() {
   let playersArr;
   if (seedMode === 'standings') {
     const sorted = sortedPlayers();
-    playersArr = sorted.map((p, i) => ({ name: p.name, seed: i + 1 }));
+    playersArr = sorted.map((p, i) => ({ name: p.name, seed: i + 1, losses: 0 }));
   } else {
-    playersArr = state.players.map((p, i) => ({ name: p.name, seed: i + 1 }));
+    playersArr = state.players.map((p, i) => ({ name: p.name, seed: i + 1, losses: 0 }));
     for (let i = playersArr.length - 1; i > 0; i--) {
       const j = Math.floor(Math.random() * (i + 1));
       [playersArr[i], playersArr[j]] = [playersArr[j], playersArr[i]];
     }
   }
-
   while (playersArr.length < numPlayers) playersArr.push({ name: 'TBD', seed: null });
   playersArr = playersArr.slice(0, numPlayers);
 
   const size = nextPow2(numPlayers);
-  while (playersArr.length < size) playersArr.push({ name: 'BYE', seed: null });
+  while (playersArr.length < size) playersArr.push({ name: 'BYE', seed: null, losses: 0 });
 
-  bracketState = buildBracketState(playersArr, format);
+  // Build seeded bracket order so top seed plays bottom seed: 1 vs N, 2 vs N-1, etc.
+  function seedOrder(n) {
+    if (n === 1) return [1];
+    let order = [1, 2];
+    while (order.length < n) {
+      const next = [];
+      const newLen = order.length * 2;
+      order.forEach(x => { next.push(x); next.push(newLen + 1 - x); });
+      order = next;
+    }
+    return order.slice(0, n);
+  }
+
+  const order = seedOrder(size);
+  const seededPlayers = order.map(pos => (playersArr[pos - 1] || { name: 'BYE', seed: null, losses: 0 }));
+
+  bracketState = buildBracketState(seededPlayers, format);
   renderBracket();
 }
 
@@ -212,8 +227,8 @@ function wireWinnersToLosers(matches, size) {
     const wMs = wByRound[wRounds[wi]] || [];
     const lMs = lByRound[lRounds[Math.min(wi * 2 - 1, lRounds.length - 1)]] || lR1;
     wMs.forEach((m, i) => {
-      const lm = lMs[i % lMs.length];
-      if (lm) { m.loserMatchId = lm.id; m.loserSlot = 1; }
+      const lm = lMs[Math.floor(i / 2)];
+      if (lm) { m.loserMatchId = lm.id; m.loserSlot = (i % 2 === 0) ? 1 : 2; }
     });
   }
 }

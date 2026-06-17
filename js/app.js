@@ -67,6 +67,7 @@ function render() {
   renderStats();
   renderAdmin();
   updateMatchSelects();
+  updateBracketPlayerPicker();
 }
 
 // HOME
@@ -204,7 +205,93 @@ function updateMatchSelects() {
   if(md && !md.value) md.value = new Date().toISOString().slice(0,10);
 }
 
+function getSelectedBracketPlayerNames() {
+  return [...document.querySelectorAll('#bracket-player-picker input[type="checkbox"]:checked')]
+    .map(input => input.value);
+}
+
+function syncBracketPlayerCount() {
+  const count = getSelectedBracketPlayerNames().length;
+  const input = document.getElementById('bracket-players');
+  if (input) input.value = count ? Math.max(4, Math.min(32, count)) : 0;
+  syncBracketSeedOrder();
+  renderBracketSeedList();
+}
+
+function updateBracketPlayerPicker() {
+  const picker = document.getElementById('bracket-player-picker');
+  if (!picker) return;
+
+  const existingChecked = new Set(getSelectedBracketPlayerNames());
+  const hasExisting = picker.children.length > 0;
+  picker.innerHTML = state.players.map(player => {
+    const checked = !hasExisting || existingChecked.has(player.name) ? 'checked' : '';
+    return `<label class="bracket-player-option">
+      <input type="checkbox" value="${player.name}" ${checked}>
+      <span>${player.name}</span>
+    </label>`;
+  }).join('');
+
+  syncBracketPlayerCount();
+}
+
+function syncBracketSeedOrder() {
+  const selectedNames = getSelectedBracketPlayerNames();
+  const selected = new Set(selectedNames);
+  bracketSeedOrder = bracketSeedOrder.filter(name => selected.has(name));
+  selectedNames.forEach(name => {
+    if (!bracketSeedOrder.includes(name)) bracketSeedOrder.push(name);
+  });
+}
+
+function renderBracketSeedList() {
+  const list = document.getElementById('bracket-seed-list');
+  if (!list) return;
+
+  if (!bracketSeedOrder.length) {
+    list.innerHTML = '<div class="bracket-seed-empty">Select players to seed</div>';
+    return;
+  }
+
+  list.innerHTML = bracketSeedOrder.map((name, index) => `
+    <div class="bracket-seed-row" data-name="${name}">
+      <div class="bracket-seed-rank">${index + 1}</div>
+      <div class="bracket-seed-name">${name}</div>
+      <button type="button" class="seed-move" data-dir="up" ${index === 0 ? 'disabled' : ''}>Up</button>
+      <button type="button" class="seed-move" data-dir="down" ${index === bracketSeedOrder.length - 1 ? 'disabled' : ''}>Down</button>
+    </div>
+  `).join('');
+}
+
+function moveBracketSeed(name, dir) {
+  const index = bracketSeedOrder.indexOf(name);
+  if (index < 0) return;
+  const nextIndex = dir === 'up' ? index - 1 : index + 1;
+  if (nextIndex < 0 || nextIndex >= bracketSeedOrder.length) return;
+  [bracketSeedOrder[index], bracketSeedOrder[nextIndex]] = [bracketSeedOrder[nextIndex], bracketSeedOrder[index]];
+  renderBracketSeedList();
+}
+
 // EVENTS
+document.getElementById('bracket-player-picker').addEventListener('change', syncBracketPlayerCount);
+
+document.getElementById('bracket-seed-list').addEventListener('click', e => {
+  const btn = e.target.closest('.seed-move');
+  if (!btn) return;
+  const row = btn.closest('.bracket-seed-row');
+  if (row) moveBracketSeed(row.dataset.name, btn.dataset.dir);
+});
+
+document.getElementById('bracket-select-all').addEventListener('click', () => {
+  document.querySelectorAll('#bracket-player-picker input[type="checkbox"]').forEach(input => { input.checked = true; });
+  syncBracketPlayerCount();
+});
+
+document.getElementById('bracket-clear-all').addEventListener('click', () => {
+  document.querySelectorAll('#bracket-player-picker input[type="checkbox"]').forEach(input => { input.checked = false; });
+  syncBracketPlayerCount();
+});
+
 document.getElementById('btn-add-player').addEventListener('click', ()=>{
   const name = document.getElementById('new-player-name').value.trim().toUpperCase();
   if(!name) return;
@@ -253,25 +340,41 @@ document.getElementById('btn-reset').addEventListener('click', ()=>{
 // ─── BRACKET ENGINE ─────────────────────────────────────────────────────────
 
 let bracketState = null; // { format, matches: [{id, round, side, p1, p2, winner, loser, nextMatchId, nextSlot, loserMatchId, loserSlot}] }
+let bracketSeedOrder = [];
 
 document.getElementById('btn-gen-bracket').addEventListener('click', generateBracket);
 
 function generateBracket() {
   const format = document.getElementById('bracket-format').value;
-  let numPlayers = parseInt(document.getElementById('bracket-players').value);
+  const selectedNames = new Set(getSelectedBracketPlayerNames());
+  if (!selectedNames.size) {
+    toast('Select bracket players!');
+    return;
+  }
+
+  let numPlayers = selectedNames.size;
   numPlayers = Math.max(4, Math.min(32, numPlayers));
+  document.getElementById('bracket-players').value = numPlayers;
   const seedMode = document.getElementById('bracket-seed').value;
 
   let playersArr;
-  if (seedMode === 'standings') {
-    const sorted = sortedPlayers();
+  if (seedMode === 'manual') {
+    syncBracketSeedOrder();
+    playersArr = bracketSeedOrder
+      .filter(name => selectedNames.has(name))
+      .map((name, i) => ({ name, seed: i + 1, wins: 0, losses: 0 }));
+  } else if (seedMode === 'standings') {
+    const sorted = sortedPlayers().filter(p => selectedNames.has(p.name));
     playersArr = sorted.map((p, i) => ({ name: p.name, seed: i + 1, wins: 0, losses: 0 }));
   } else {
-    playersArr = state.players.map((p, i) => ({ name: p.name, seed: i + 1, wins: 0, losses: 0 }));
+    playersArr = state.players
+      .filter(p => selectedNames.has(p.name))
+      .map((p, i) => ({ name: p.name, seed: i + 1, wins: 0, losses: 0 }));
     for (let i = playersArr.length - 1; i > 0; i--) {
       const j = Math.floor(Math.random() * (i + 1));
       [playersArr[i], playersArr[j]] = [playersArr[j], playersArr[i]];
     }
+    playersArr.forEach((player, i) => { player.seed = i + 1; });
   }
 
   while (playersArr.length < numPlayers) playersArr.push({ name: 'TBD', seed: null, wins: 0, losses: 0 });
