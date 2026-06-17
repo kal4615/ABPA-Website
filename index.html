@@ -109,9 +109,24 @@
     <button class="btn-generate" id="btn-gen-bracket">Generate</button>
     <label>Seed from</label>
     <select id="bracket-seed">
+      <option value="manual" selected>Manual Order</option>
       <option value="standings">Current Standings</option>
       <option value="random">Random</option>
     </select>
+  </div>
+  <div class="bracket-player-manager">
+    <div class="bracket-player-manager-head">
+      <label>Bracket Players</label>
+      <div class="bracket-player-actions">
+        <button type="button" id="bracket-select-all">Select All</button>
+        <button type="button" id="bracket-clear-all">Clear</button>
+      </div>
+    </div>
+    <div class="bracket-player-picker" id="bracket-player-picker"></div>
+    <div class="bracket-seed-manager">
+      <div class="bracket-seed-title">Seed Order</div>
+      <div class="bracket-seed-list" id="bracket-seed-list"></div>
+    </div>
   </div>
   <div class="bracket-wrap" id="bracket-wrap">
     <div class="bracket-placeholder"><span class="big">8-BALL</span>Set options above and hit Generate</div>
