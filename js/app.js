@@ -1,3 +1,5 @@
+import { initRemoteStore, isRemoteConfigured, saveRemoteState } from './remote-store.js';
+
 const DEFAULT_PLAYERS = [
   {name:'SONNY',w:2,l:3,pts:10},{name:'RJ',w:1,l:4,pts:6},{name:'KEVIN',w:1,l:4,pts:4},
   {name:'ZACH',w:1,l:4,pts:3},{name:'RAY',w:0,l:2,pts:2},{name:'BRYCE',w:0,l:3,pts:2},
@@ -5,24 +7,50 @@ const DEFAULT_PLAYERS = [
 ];
 
 let state = loadState();
+let remoteReady = false;
 
 function loadState() {
   try {
     const s = localStorage.getItem('abpa_state');
-    if (s) return JSON.parse(s);
+    if (s) return normalizeState(JSON.parse(s));
   } catch(e){}
-  return {
+  return normalizeState({
     players: DEFAULT_PLAYERS.map(p=>({...p, appearances: p.w+p.l})),
     matches: [],
     season: { num: 3, name: 'ABPA League' },
     updatedAt: new Date().toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'})
+  });
+}
+
+function normalizeState(nextState) {
+  return {
+    players: Array.isArray(nextState?.players) ? nextState.players : DEFAULT_PLAYERS.map(p=>({...p, appearances: p.w+p.l})),
+    matches: Array.isArray(nextState?.matches) ? nextState.matches : [],
+    season: nextState?.season || { num: 3, name: 'ABPA League' },
+    updatedAt: nextState?.updatedAt || new Date().toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'})
   };
+}
+
+function applySharedState(nextState) {
+  state = normalizeState(nextState);
+  localStorage.setItem('abpa_state', JSON.stringify(state));
+  render();
 }
 
 function saveState() {
   state.updatedAt = new Date().toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'});
   localStorage.setItem('abpa_state', JSON.stringify(state));
-  toast('Saved!');
+  if (!remoteReady) {
+    toast(isRemoteConfigured() ? 'Saved locally. Database unavailable.' : 'Saved locally.');
+    return;
+  }
+
+  saveRemoteState(state)
+    .then(()=>toast('Saved to database!'))
+    .catch(error=>{
+      console.error('Firebase save failed:', error);
+      toast('Saved locally. Database unavailable.');
+    });
 }
 
 function toast(msg) {
@@ -332,6 +360,7 @@ document.getElementById('btn-reset').addEventListener('click', ()=>{
   if(confirm('Reset ALL league data? This cannot be undone.')) {
     localStorage.removeItem('abpa_state');
     state = loadState();
+    saveState();
     render();
     toast('Data reset!');
   }
@@ -1063,3 +1092,14 @@ document.getElementById('edit-modal').addEventListener('keydown', e=>{
 
 // INIT
 render();
+initRemoteStore(
+  state,
+  applySharedState,
+  error => {
+    console.error('Firebase sync failed:', error);
+    toast('Database unavailable. Using local data.');
+  }
+).then(enabled => {
+  remoteReady = enabled;
+  if (enabled) toast('Connected to database.');
+});
