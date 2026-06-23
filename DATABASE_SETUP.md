@@ -15,9 +15,18 @@ This site now saves to Firebase Firestore when `js/firebase-config.js` has real 
 2. Create a database.
 3. Start in production mode if you want to use rules below.
 
-## 3. Firestore Rules
+## 3. Admin Login
 
-For a private league site, the best long-term setup is Firebase Auth plus admin-only writes. For quick testing, these rules let anyone read and write the league document:
+1. In Firebase, open **Authentication**.
+2. Click **Get started**.
+3. Enable **Email/Password** sign-in.
+4. Add one user for yourself.
+5. Copy that user's email into `js/firebase-config.js` as `adminEmail`.
+6. The site will ask for only the password when someone clicks **Manage**.
+
+## 4. Firestore Rules
+
+For quick testing, these rules let anyone read and write the league document:
 
 ```js
 rules_version = '2';
@@ -34,7 +43,23 @@ service cloud.firestore {
 
 Only use open write rules while testing. Anyone who can load the site can change the standings.
 
-## 4. Data Location
+For the real site, use these rules after your admin user is created. Copy your admin user's **User UID** from Firebase Authentication and paste it below:
+
+```js
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /leagues/abpa {
+      allow read: if true;
+      allow write: if request.auth != null
+        && request.auth.uid == "YOUR_ADMIN_UID_HERE";
+    }
+  }
+}
+```
+
+## 5. Data Location
 
 The app stores the league state in this Firestore document:
 
