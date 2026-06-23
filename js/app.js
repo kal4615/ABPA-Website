@@ -1,4 +1,12 @@
-import { initRemoteStore, isRemoteConfigured, saveRemoteState } from './remote-store.js';
+import {
+  initRemoteStore,
+  isAdminEmailConfigured,
+  isAdminSignedIn,
+  isRemoteConfigured,
+  saveRemoteState,
+  signInAdmin,
+  signOutAdmin
+} from './remote-store.js';
 
 const DEFAULT_PLAYERS = [
   {name:'SONNY',w:2,l:3,pts:10},{name:'RJ',w:1,l:4,pts:6},{name:'KEVIN',w:1,l:4,pts:4},
@@ -61,15 +69,40 @@ function toast(msg) {
 }
 
 // NAVIGATION
+function showPage(pg) {
+  document.querySelectorAll('.nav-links a').forEach(x=>x.classList.toggle('active', x.dataset.page === pg));
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.getElementById('page-'+pg).classList.add('active');
+  render();
+}
+
+async function requestAdminAccess() {
+  if (isAdminSignedIn()) return true;
+  if (!isAdminEmailConfigured()) {
+    toast('Set adminEmail in firebase-config.js first.');
+    return false;
+  }
+
+  const password = prompt('Admin password');
+  if (!password) return false;
+
+  try {
+    await signInAdmin(password);
+    toast('Admin unlocked.');
+    return true;
+  } catch (error) {
+    console.error('Admin sign-in failed:', error);
+    toast('Wrong password or admin not set up.');
+    return false;
+  }
+}
+
 document.querySelectorAll('.nav-links a').forEach(a=>{
-  a.addEventListener('click', e=>{
+  a.addEventListener('click', async e=>{
     e.preventDefault();
     const pg = a.dataset.page;
-    document.querySelectorAll('.nav-links a').forEach(x=>x.classList.remove('active'));
-    a.classList.add('active');
-    document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
-    document.getElementById('page-'+pg).classList.add('active');
-    render();
+    if (pg === 'admin' && !(await requestAdminAccess())) return;
+    showPage(pg);
   });
 });
 
@@ -113,18 +146,19 @@ function renderHome() {
 function renderStandingsTable(list, allSorted) {
   return `<table class="standings-table">
     <thead><tr>
-      <th>Rank</th><th>Player</th><th>A</th><th>W</th><th>L</th><th>WP%</th><th>Pts</th>
+      <th>Rank</th><th>Player</th><th>Appearances</th><th>Record</th><th>Tournament Wins</th><th>WP%</th><th>Pts</th>
     </tr></thead>
     <tbody>
     ${list.map(p=>{
       const rank = allSorted.indexOf(p)+1;
       const cls = rank===1?'rank-1':rank===2?'rank-2':rank===3?'rank-3':'';
+      const tournamentWins = p.tournamentWins || 0;
       return `<tr class="${cls}">
         <td class="rank-cell">${rank}</td>
         <td><span class="player-name">${p.name}</span></td>
         <td>${p.appearances||0}</td>
-        <td>${p.w}</td>
-        <td>${p.l||0}</td>
+        <td>${p.w}-${p.l||0}</td>
+        <td>${p.v||0}</td>
         <td><span class="wp-cell">${wp(p).toFixed(1)}%</span></td>
         <td class="pts-cell">${p.pts}</td>
       </tr>`;
@@ -140,12 +174,13 @@ function renderStandings() {
   document.getElementById('standings-body').innerHTML = sorted.map((p,i)=>{
     const rank = i+1;
     const cls = rank===1?'rank-1':rank===2?'rank-2':rank===3?'rank-3':'';
+    const tournamentWins = p.tournamentWins || 0;
     return `<tr class="${cls}">
       <td class="rank-cell">${rank}</td>
       <td><span class="player-name">${p.name}</span></td>
       <td>${p.appearances||0}</td>
-      <td>${p.w}</td>
-      <td>${p.l||0}</td>
+      <td>${p.w}-${p.l||0}</td>
+      <td>${p.v||0}</td>
       <td><span class="wp-cell">${wp(p).toFixed(1)}%</span></td>
       <td class="pts-cell">${p.pts}</td>
     </tr>`;
@@ -221,6 +256,22 @@ function renderAdmin() {
   const snm = document.getElementById('season-name');
   if(sn) sn.value = state.season.num;
   if(snm) snm.value = state.season.name;
+
+  const seasonCard = document.querySelector('#page-admin .admin-card:last-child');
+  if (seasonCard && !document.getElementById('btn-admin-signout')) {
+    const btn = document.createElement('button');
+    btn.className = 'btn-submit';
+    btn.id = 'btn-admin-signout';
+    btn.type = 'button';
+    btn.style.cssText = 'background:#333; margin-top:0.5rem; font-size:0.9rem; letter-spacing:2px;';
+    btn.textContent = 'Sign Out';
+    btn.addEventListener('click', async () => {
+      await signOutAdmin();
+      toast('Signed out.');
+      showPage('home');
+    });
+    seasonCard.appendChild(btn);
+  }
 }
 
 function updateMatchSelects() {
@@ -1052,6 +1103,7 @@ function openEditModal(i) {
   document.getElementById('edit-w').value = p.w || 0;
   document.getElementById('edit-l').value = p.l || 0;
   document.getElementById('edit-a').value = p.appearances || 0;
+  document.getElementById('edit-v').value = p.v || 0;
   document.getElementById('edit-pts').value = p.pts || 0;
   document.getElementById('edit-modal').classList.add('open');
   document.getElementById('edit-w').focus();
@@ -1074,10 +1126,12 @@ document.getElementById('edit-save').addEventListener('click', ()=>{
   const w = Math.max(0, parseInt(document.getElementById('edit-w').value)||0);
   const l = Math.max(0, parseInt(document.getElementById('edit-l').value)||0);
   const a = Math.max(w+l, parseInt(document.getElementById('edit-a').value)||0);
+  const v = Math.max(0, parseInt(document.getElementById('edit-v').value)||0);
   const pts = Math.max(0, parseInt(document.getElementById('edit-pts').value)||0);
   p.w = w;
   p.l = l;
   p.appearances = a;
+  p.v = v;
   p.pts = pts;
   closeEditModal();
   saveState();
